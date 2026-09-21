@@ -150,12 +150,20 @@ async function showRoomModal(roomId = null) {
             document.getElementById('room-type').value = room.room_type;
             document.getElementById('room-price').value = room.price_per_night;
             document.getElementById('room-description').value = room.description || '';
+            const statusSelect = document.getElementById('room-status');
+            if (statusSelect) {
+                statusSelect.value = room.is_available ? 'true' : 'false';
+            }
         } catch (error) {
             console.error('Error loading room:', error);
             return;
         }
     } else {
         title.textContent = 'Add Room';
+        const statusSelect = document.getElementById('room-status');
+        if (statusSelect) {
+            statusSelect.value = 'true';
+        }
     }
     
     modal.style.display = 'block';
@@ -165,12 +173,14 @@ async function saveRoom(event) {
     event.preventDefault();
     
     const roomId = document.getElementById('room-id').value;
+    const statusSelect = document.getElementById('room-status');
+    const isAvailable = statusSelect ? statusSelect.value === 'true' : true;
     const roomData = {
         room_number: document.getElementById('room-number').value,
         room_type: document.getElementById('room-type').value,
         price_per_night: parseFloat(document.getElementById('room-price').value),
         description: document.getElementById('room-description').value,
-        is_available: true
+        is_available: isAvailable
     };
     
     try {
@@ -431,6 +441,7 @@ async function saveBooking(event) {
         
         closeModal('booking-modal');
         loadBookings();
+        loadRooms();
         loadDashboardStats();
     } catch (error) {
         console.error('Error creating booking:', error);
@@ -442,6 +453,7 @@ async function confirmBooking(bookingId) {
     try {
         await apiCall(`/bookings/${bookingId}/confirm/`, 'POST');
         loadBookings();
+        loadRooms();
         loadDashboardStats();
     } catch (error) {
         console.error('Error confirming booking:', error);
@@ -453,6 +465,7 @@ async function checkInBooking(bookingId) {
     try {
         await apiCall(`/bookings/${bookingId}/check_in/`, 'POST');
         loadBookings();
+        loadRooms();
         loadDashboardStats();
     } catch (error) {
         console.error('Error checking in booking:', error);
@@ -464,6 +477,7 @@ async function checkOutBooking(bookingId) {
     try {
         await apiCall(`/bookings/${bookingId}/check_out/`, 'POST');
         loadBookings();
+        loadRooms();
         loadDashboardStats();
     } catch (error) {
         console.error('Error checking out booking:', error);
@@ -476,6 +490,7 @@ async function cancelBooking(bookingId) {
         try {
             await apiCall(`/bookings/${bookingId}/cancel/`, 'POST');
             loadBookings();
+            loadRooms();
             loadDashboardStats();
         } catch (error) {
             console.error('Error cancelling booking:', error);

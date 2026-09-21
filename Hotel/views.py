@@ -26,7 +26,7 @@ class RoomViewSet(viewsets.ModelViewSet):
             )
         
         booked_rooms = Booking.objects.filter(
-            Q(status='CONFIRMED') | Q(status='CHECKED_IN'),
+            Q(status='CONFIRMED') | Q(status='CHECKED_IN') | Q(status='PENDING'),
             check_in_date__lte=check_out,
             check_out_date__gte=check_in
         ).values_list('room_id', flat=True)
@@ -47,6 +47,12 @@ class GuestViewSet(viewsets.ModelViewSet):
 class BookingViewSet(viewsets.ModelViewSet):
     queryset = Booking.objects.select_related('guest', 'room').all()
     serializer_class = BookingSerializer
+
+    def perform_create(self, serializer):
+        booking = serializer.save()
+        if booking.status in ['PENDING', 'CONFIRMED', 'CHECKED_IN']:
+            booking.room.is_available = False
+            booking.room.save(update_fields=['is_available'])
 
     def get_serializer_class(self):
         if self.action in ['retrieve', 'list']:

@@ -58,11 +58,54 @@ class Booking(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
+        old_room = None
+        if self.pk:
+            try:
+                old_instance = Booking.objects.get(pk=self.pk)
+                old_room = old_instance.room
+            except Booking.DoesNotExist:
+                pass
+
         if self.room and self.check_in_date and self.check_out_date:
             nights = (self.check_out_date - self.check_in_date).days
             if nights > 0:
                 self.total_amount = self.room.price_per_night * nights
         super().save(*args, **kwargs)
+
+        if old_room and old_room != self.room:
+            has_active_old = Booking.objects.filter(
+                room=old_room,
+                status__in=['PENDING', 'CONFIRMED', 'CHECKED_IN']
+            ).exists()
+            if not has_active_old and not old_room.is_available:
+                old_room.is_available = True
+                old_room.save(update_fields=['is_available'])
+
+        if self.room:
+            if self.status in ['PENDING', 'CONFIRMED', 'CHECKED_IN']:
+                if self.room.is_available:
+                    self.room.is_available = False
+                    self.room.save(update_fields=['is_available'])
+            elif self.status in ['CHECKED_OUT', 'CANCELLED']:
+                has_active = Booking.objects.filter(
+                    room=self.room,
+                    status__in=['PENDING', 'CONFIRMED', 'CHECKED_IN']
+                ).exclude(pk=self.pk).exists()
+                if not has_active and not self.room.is_available:
+                    self.room.is_available = True
+                    self.room.save(update_fields=['is_available'])
+
+    def delete(self, *args, **kwargs):
+        room = self.room
+        super().delete(*args, **kwargs)
+        if room:
+            has_active = Booking.objects.filter(
+                room=room,
+                status__in=['PENDING', 'CONFIRMED', 'CHECKED_IN']
+            ).exists()
+            if not has_active and not room.is_available:
+                room.is_available = True
+                room.save(update_fields=['is_available'])
 
     def __str__(self):
         return f"Booking {self.id} - {self.guest} - Room {self.room.room_number}"

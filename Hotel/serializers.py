@@ -23,6 +23,13 @@ class BookingSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['created_at', 'updated_at', 'total_amount']
 
+    def validate(self, attrs):
+        room = attrs.get('room')
+        if not self.instance or (room and self.instance.room != room):
+            if room and not room.is_available:
+                raise serializers.ValidationError({"room": f"Room {room.room_number} is already booked and not available."})
+        return attrs
+
 class BookingDetailSerializer(serializers.ModelSerializer):
     guest = GuestSerializer(read_only=True)
     room = RoomSerializer(read_only=True)
