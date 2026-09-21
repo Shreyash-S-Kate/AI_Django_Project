@@ -1,11 +1,16 @@
-from pathlib import Path
 import os
+from pathlib import Path
+import environ
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-hotel-mgmt-sample-key-for-local-development'
+env = environ.Env()
 
-DEBUG = True
+environ.Env.read_env(os.path.join(BASE_DIR.parent, '.env'))
+
+SECRET_KEY = env('SECRET_KEY')
+
+DEBUG = env.bool('DEBUG', default=False)
 
 ALLOWED_HOSTS = ['*']
 
